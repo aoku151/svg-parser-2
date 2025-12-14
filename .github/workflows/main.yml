@@ -1,0 +1,96 @@
+name: Parse SVGs from Issue (zip)
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Extract first attachment URL
+        id: extract
+        run: |
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Download first zip
+        run: |
+          mkdir -p input_zip
+          url=$(echo "${{ steps.extract.outputs.body }}" | grep -o 'https://github.com/.*/assets/[0-9]*/[a-z0-9-]*' | head -n1)
+          echo "Downloading first attachment: $url"
+          curl -L "$url" -o input_zip/files.zip
+
+      - name: Unzip SVGs
+        run: |
+          mkdir -p svgs
+          unzip -o input_zip/files.zip -d svgs
+
+      - name: Process SVGs
+        run: |
+          mkdir -p parsed_svgs
+          python main.py svgs/*.svg parsed_svgs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: parsed-svgs
+          path: parsed_svgs/
+
+      - name: Read summary
+        id: summary
+        run: |
+          echo "summary=$(cat summary.json)" >> $GITHUB_OUTPUT
+
+      - name: Comment with artifact link and summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.issue.number;
+            const artifact_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const summary = JSON.parse(process.env.summary);
+
+            let successList = summary.success.length
+              ? summary.success.map(f => `- ${f}`).join("\n")
+              : "なし";
+
+            let failList = summary.fail.length
+              ? summary.fail.map(f => `- ${f.file}: ${f.error}`).join("\n")
+              : "なし";
+
+            const body = [
+              "✅ SVGの処理が完了しました！",
+              "",
+              "### 成功ファイル",
+              successList,
+              "",
+              "### 失敗ファイル（エラー内容付き）",
+              failList,
+              "",
+              `📦 結果はこちらからダウンロードできます: [Artifacts](${artifact_url})`
+            ].join("\n");
+
+            github.rest.issues.createComment({
+              issue_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
