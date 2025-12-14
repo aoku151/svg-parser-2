@@ -48,7 +48,7 @@ jobs:
       - name: Unzip SVGs
         run: |
           mkdir -p svgs
-          unzip -o input_zip/files.zip -d svgs
+          unzip -jo input_zip/files.zip -d svgs
 
       - name: Process SVGs
         run: |
