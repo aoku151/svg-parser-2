@@ -35,7 +35,13 @@ jobs:
       - name: Download first zip
         run: |
           mkdir -p input_zip
-          url=$(echo "${{ steps.extract.outputs.body }}" | grep -o 'https://github.com/.*/assets/[0-9]*/[a-z0-9-]*' | head -n1)
+          url=$(echo "${{ github.event.issue.body }}" \
+            | grep -o 'https://github.com/user-attachments/files/[0-9]*/[^)]*' \
+            | head -n1)
+          if [ -z "$url" ]; then
+            echo "❌ No zip attachment found in issue body"
+            exit 1
+          fi
           echo "Downloading first attachment: $url"
           curl -L "$url" -o input_zip/files.zip
 
