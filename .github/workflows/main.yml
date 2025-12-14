@@ -75,10 +75,11 @@ jobs:
           script: |
             const issue_number = context.issue.number;
             const artifact_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const summaryRaw = process.env.summary;
+            const summaryRaw = process.env.SUMMARY;
 
             if (!summaryRaw) {
-              throw new Error("summary is undefined. Check previous step output.");
+              core.setFailed("❌ SUMMARY is undefined. Check previous step output.");
+              return;
             }
 
             const summary = JSON.parse(summaryRaw);
