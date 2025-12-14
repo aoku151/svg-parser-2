@@ -4,6 +4,10 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   parse:
     runs-on: ubuntu-latest
@@ -25,17 +29,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Extract first attachment URL
-        id: extract
-        run: |
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Download first zip
         run: |
           mkdir -p input_zip
-          url=$(echo "${{ steps.extract.outputs.body }}" \
+          url=$(echo "${{ github.event.issue.body }}" \
             | grep -o 'https://github.com/user-attachments/files/[0-9]*/[^)]*' \
             | head -n1)
           if [ -z "$url" ]; then
@@ -69,17 +66,16 @@ jobs:
 
       - name: Comment with artifact link and summary
         uses: actions/github-script@v7
+        env:
+          SUMMARY: ${{ steps.summary.outputs.summary }}
         with:
-          env:
-            SUMMARY: ${{ steps.summary.outputs.summary }}
           script: |
             const issue_number = context.issue.number;
             const artifact_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const summaryRaw = process.env.SUMMARY;
 
             if (!summaryRaw) {
-              core.setFailed("❌ SUMMARY is undefined. Check previous step output.");
-              return;
+              throw new Error("❌ SUMMARY is undefined. Check previous step output.");
             }
 
             const summary = JSON.parse(summaryRaw);
