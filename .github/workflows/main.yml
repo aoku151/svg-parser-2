@@ -96,7 +96,6 @@ jobs:
               body
             });
 
-
       - name: Comment with artifact link and summary
         uses: actions/github-script@v7
         with:
