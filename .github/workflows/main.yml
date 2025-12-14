@@ -102,16 +102,22 @@ jobs:
           script: |
             const issue_number = context.issue.number;
             const artifact_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const summary = JSON.parse(process.env.summary);
-
+            const summaryRaw = process.env.summary;
+      
+            if (!summaryRaw) {
+              throw new Error("summary is undefined. Check previous step output.");
+            }
+      
+            const summary = JSON.parse(summaryRaw);
+      
             let successList = summary.success.length
               ? summary.success.map(f => `- ${f}`).join("\n")
               : "なし";
-
+      
             let failList = summary.fail.length
               ? summary.fail.map(f => `- ${f.file}: ${f.error}`).join("\n")
               : "なし";
-
+      
             const body = [
               "✅ SVGの処理が完了しました！",
               "",
@@ -123,7 +129,7 @@ jobs:
               "",
               `📦 結果はこちらからダウンロードできます: [Artifacts](${artifact_url})`
             ].join("\n");
-
+      
             github.rest.issues.createComment({
               issue_number,
               owner: context.repo.owner,
