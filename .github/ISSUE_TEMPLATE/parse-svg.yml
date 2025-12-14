@@ -1,0 +1,14 @@
+name: "SVG Parser Request (zip)"
+description: "Upload a zip file containing multiple SVGs"
+title: "[SVG] Parse request"
+labels: ["svg", "automation"]
+
+body:
+  - type: textarea
+    id: attachment
+    attributes:
+      label: "SVG zip ファイルを添付"
+      description: "ここに zip ファイルをドラッグ＆ドロップしてください。必要なら補足説明も記入できます。"
+      placeholder: "例: translate属性を修正したい\n\n(ここに zip ファイルを添付)"
+    validations:
+      required: true
